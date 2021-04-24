@@ -18,6 +18,10 @@ service_1 = []
 service_2 = []
 js = []
 
+csvpath = os.listdir('csv')
+for f in csvpath:
+    os.remove(os.path.join('csv', f))
+
 
 @app.route('/')
 
@@ -27,10 +31,7 @@ def upload():
 @app.route('/uploader', methods = ['GET', 'POST'])
 def upload_file():
     count = 0
-    # csvpath = os.listdir('csv')
-    # if len(csvpath) == 2:
-    #     while True:
-    #         os.remove(csvpath[0,2,3])
+ 
 
     db_name ='csv/csvtest_{}.db'
 
@@ -109,6 +110,8 @@ def upload_file():
         # with open('jsondump/1stcall.json', 'w') as jss:
         #     json.dump(service_1, jss)
         conn.close()
+
+
         #  delete all files in /csv
         return jsonify({'row': service_1})
 
@@ -135,6 +138,9 @@ def return_ser_2():
 #         if q ['name'] ==  name:
 #             the_one = service_1[i]
 #         return jsonify({'service_1': service_1})
+
+
+
 
 
 

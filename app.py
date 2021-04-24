@@ -5,20 +5,43 @@ from flask import Flask, request, render_template, url_for, redirect, Response, 
 import os
 from werkzeug.utils import secure_filename
 import csv
-import codecs
 import json
 from pandas import read_csv
 import sqlite3 as sql
 from itertools import zip_longest
-
+import requests
 app = Flask(__name__)
 
 
 
 service_1 = []
+service_2 = []
 js = []
 
+def iter_lines(fd, chunk_size=1):
+    '''Iterates over the content of a file-like object line-by-line.'''
 
+    pending = None
+
+    while True:
+        chunk = os.read(fd.fileno(), chunk_size)
+        if not chunk:
+            break
+
+        if pending is not None:
+            chunk = pending + chunk
+            pending = None
+
+        lines = chunk.splitlines()
+
+        if lines and lines[-1]:
+            pending = lines.pop()
+
+        for line in lines:
+            yield line
+
+    if pending:
+        yield(pending)
 
 @app.route('/')
 
@@ -28,7 +51,14 @@ def upload():
 @app.route('/uploader', methods = ['GET', 'POST'])
 def upload_file():
     count = 0
-    db_name ='csvtest_{}.db'
+    # csvpath = os.listdir('csv')
+    # if len(csvpath) == 2:
+    #     while True:
+    #         os.remove(csvpath[0,2,3])
+
+    db_name ='csv/csvtest_{}.db'
+
+            
 
     while os.path.isfile(db_name.format(count)):
         count +=1
@@ -45,35 +75,70 @@ def upload_file():
         cur = conn.cursor()
         cur.execute('ALTER TABLE dita ADD COLUMN FULLNAME STRING')
         cur.execute('ALTER TABLE dita ADD COLUMN CUSTOMER_RANK STRING')
+        cur.execute('ALTER TABLE dita ADD COLUMN BVN STRING')
         cur.execute('UPDATE dita SET FULLNAME = (FIRSTNAME|| " " || SURNAME)')
-        cur.execute('SELECT FULLNAME, CUSTOMER_RANK, PHONE, EMAIL FROM dita')
+        cur.execute('SELECT EMAIL, DEVICE_ID, CLIENT_ID, ID, PHONE, IFNULL(BVN,"NULL") AS BVN, FULLNAME FROM dita')
         rows =cur.fetchall()
         ki = []
         di = []
 
         for row in rows:
+            k = {}
+            le = {}
+
             d = {}
+            le['username'] = row[0]
             d['customer_rank'] = row[1]
-            d['mobile'] = row[2]
-            d['fullname'] = row[0]
-            di.append(d)
+            d['phone'] = row[4]
+            d['fullname'] = row[6]
+            d['email'] = row[0]
+
+            response = requests.post(url="http://localhost:5000/service_1", data=d)
             
-            ki.append(row[3])
-        print(di)
 
-        servic = [{a:b} for (a,b) in zip_longest(ki,di)]
-        service_1.append(servic)
-        # response = req.post("http://localhost:5000/service_1", service_1)
+            y = response.json()
+            z = y['model']['id']
+            d['customer']= z 
 
-        with open('jsondump/1stcall.json', 'w') as jss:
-            json.dump(service_1, jss)
+            claim1 = {'claim':"http://wso2.org/claims/deviceid", "value":row[1]}
+            claim2 = {'claim':"http://wso2.org/claims/externalid", "value":row[2]}
+            claim3 = {'claim':"http://wso2.org/claims/customerid", "value":row[3]}
+            claim4 = {'claim':"http://wso2.org/claims/userid", "value":z}
+            claim5 = {'claim':"http://wso2.org/claims/mobile", "value":row[4]}
+            claim6 = {'claim':"http://wso2.org/claims/askPassword", "value":0}
+            claim7 = {'claim':"http://wso2.org/claims/emailVerified", "value":1}
+            claim8 = {'claim':"http://wso2.org/claims/preferredChannel", "value":"EMAIL"}
+            claim9 = {'claim':"http://wso2.org/claims/phoneVerified", "value":1}
+            claim10 = {'claim':"http://wso2.org/claims/extendedExternalId", "value":row[5]}
+
+            properties = [claim1,claim2, claim3, claim4, claim5, claim6, claim7, claim8, claim9, claim10]
+            le['properties'] = properties
+            
+            #call service 1 and assign values
+            service_1.append(d)
+            service_2.append(le)
+            
+            response2 = requests.post(url="http://localhost:5000/service_2", data=service_2)
+            
+
+            # print(response.json())
+            
+       #     ki.append(row[3])
+        # print(response)
+
+        # servic = [{a:b} for (a,b) in zip_longest(ki,di)]
+        # service_1.append(servic)
+        
+
+        # with open('jsondump/1stcall.json', 'w') as jss:
+        #     json.dump(service_1, jss)
         conn.close()
-
-        return jsonify({'service_1': service_1})
+        #  delete all files in /csv
+        return jsonify({'row': service_1})
 
 @app.route('/service_1', methods=['POST'])
 def returnAll():
-    return jsonify({'service_1':service_1})
+    return ({'model':{'id':99}})
 
 @app.route('/service_1', methods=['GET'])
 def returnOne(name):
@@ -82,6 +147,18 @@ def returnOne(name):
         if q ['name'] ==  name:
             the_one = service_1[i]
         return jsonify({'service_1': service_1})
+
+@app.route('/service_2', methods=['POST'])
+def return_ser_2():
+    return request.get_data()
+
+# @app.route('/service_1', methods=['GET'])
+# def returnOne(name):
+#     the_one = service_1[0]
+#     for i, q in enumerate(service_1):
+#         if q ['name'] ==  name:
+#             the_one = service_1[i]
+#         return jsonify({'service_1': service_1})
 
 
 

@@ -71,8 +71,6 @@ def upload_file():
 
         return jsonify({'service_1': service_1})
 
-
-   
 @app.route('/service_1', methods=['POST'])
 def returnAll():
     return jsonify({'service_1':service_1})

@@ -31,11 +31,11 @@ def upload():
 @app.route('/uploader', methods = ['GET', 'POST'])
 def upload_file():
     count = 0
- 
+
 
     db_name ='csv/csvtest_{}.db'
 
-            
+
 
     while os.path.isfile(db_name.format(count)):
         count +=1
@@ -44,7 +44,7 @@ def upload_file():
     if request.method == 'POST':
         f = request.files['file']
         data = []
-    
+
         conn = sql.connect(db_name )
         dita = read_csv(f)
         dita.to_sql('dita', conn)
@@ -70,12 +70,12 @@ def upload_file():
             d['fullname'] = row[6]
             d['email'] = row[0]
 
-            response = requests.post(url="http://localhost:5000/service_1", data=d)
-            
+            response = requests.post(url="http://localhost:5000/service_1", json=d)
+
 
             y = response.json()
             z = y['model']['id']
-            d['customer']= z 
+            d['customer']= z
 
             claim1 = {'claim':"http://wso2.org/claims/deviceid", "value":row[1]}
             claim2 = {'claim':"http://wso2.org/claims/externalid", "value":row[2]}
@@ -90,22 +90,23 @@ def upload_file():
 
             properties = [claim1,claim2, claim3, claim4, claim5, claim6, claim7, claim8, claim9, claim10]
             le['properties'] = properties
-            
+
             #call service 1 and assign values
             service_1.append(d)
             service_2.append(le)
-            
-            response2 = requests.post(url="http://localhost:5000/service_2", data=service_2)
-            
+
+            response2 = requests.post(url="http://localhost:5000/service_2", json=service_2)
+            print(response2.headers)
+
 
             # print(response.json())
-            
+
        #     ki.append(row[3])
         # print(response)
 
         # servic = [{a:b} for (a,b) in zip_longest(ki,di)]
         # service_1.append(servic)
-        
+
 
         # with open('jsondump/1stcall.json', 'w') as jss:
         #     json.dump(service_1, jss)

@@ -113,7 +113,7 @@ def upload_file():
 
 
         #  delete all files in /csv
-        return jsonify({'row': service_1})
+        return response2.json();
 
 @app.route('/service_1', methods=['POST'])
 def returnAll():
